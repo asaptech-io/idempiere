@@ -39,7 +39,6 @@ import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.model.MBPartner;
 import org.compiere.model.MQuery;
-import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
@@ -65,7 +64,7 @@ import org.zkoss.zul.Vbox;
 * 	@version	InfoBPartner.java Adempiere Swing UI 3.4.1 
 */
 
-@Deprecated // replaced with InfoBPartnerWindow IDEMPIERE-325
+@Deprecated (since="13", forRemoval=true) // replaced with InfoBPartnerWindow IDEMPIERE-325
 public class InfoBPartnerPanel extends InfoPanel implements EventListener<Event>, WTableModelListener
 {
 	/**
@@ -93,8 +92,6 @@ public class InfoBPartnerPanel extends InfoPanel implements EventListener<Event>
 	/** SalesOrder Trx          */
 	private boolean 		m_isSOTrx;
 		
-	/**	Logger			*/
-	protected transient CLogger log = CLogger.getCLogger(getClass());
 	private Borderlayout layout;
 	private Vbox southBody;
 	

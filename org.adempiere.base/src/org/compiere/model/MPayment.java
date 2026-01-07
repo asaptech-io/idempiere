@@ -18,6 +18,7 @@ package org.compiere.model;
 
 import java.io.File;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -70,9 +71,9 @@ public class MPayment extends X_C_Payment
 	implements DocAction, ProcessCall, PaymentInterface, IDocsPostProcess
 {
 	/**
-	 * generated serial id
+	 * 
 	 */
-	private static final long serialVersionUID = -1581098289090430363L;
+	private static final long serialVersionUID = -1157628050370126666L;
 
 	/**
 	 * 	Get Payments Of BPartner
@@ -304,7 +305,8 @@ public class MPayment extends X_C_Payment
 		setAccountNo(ba.getAccountNo());
 		setIBAN(ba.getIBAN());
 		setSwiftCode(ba.getSwiftCode()) ;
-		setDescription(preparedPayment.getC_PaySelection().getName());
+		MPaySelection ps = new MPaySelection (preparedPayment.getCtx(), preparedPayment.getC_PaySelection_ID(), preparedPayment.get_TrxName());
+		setDescription(ps.getName());
 		setIsReceipt (X_C_Order.PAYMENTRULE_DirectDebit.equals	//	AR only
 				(preparedPayment.getPaymentRule()));
 		if ( MPaySelectionCheck.PAYMENTRULE_DirectDebit.equals(preparedPayment.getPaymentRule()) )
@@ -732,7 +734,8 @@ public class MPayment extends X_C_Payment
 		{
 			if (getReversal_ID() > 0)
 			{
-				setIsPrepayment(getReversal().isPrepayment());
+				MPayment reversal = new MPayment(getCtx(), getReversal_ID(), get_TrxName());
+				setIsPrepayment(reversal.isPrepayment());
 			}
 			else
 			{
@@ -843,6 +846,11 @@ public class MPayment extends X_C_Payment
 						log.saveError("FillMandatory", Msg.getElement(getCtx(), COLUMNNAME_ConvertedAmt));
 						return false;
 					}
+					BigDecimal converted = getPayAmt().multiply(getCurrencyRate());
+					int stdPrecision = MCurrency.getStdPrecision(getCtx(), as.getC_Currency_ID());
+					if (converted.scale() > stdPrecision)
+						converted = converted.setScale(stdPrecision, RoundingMode.HALF_UP);
+					setConvertedAmt(converted);
 				}
 				else
 				{
@@ -891,6 +899,13 @@ public class MPayment extends X_C_Payment
 		
 		return true;
 	}	//	beforeSave
+
+	@Override
+	protected boolean beforeDelete() {
+		@SuppressWarnings("unused")
+		boolean ok = MPaySelectionCheck.deleteGeneratedDraft(getCtx(), getC_Payment_ID(), get_TrxName());
+		return true;
+	}
 
 	/**
 	 * 	Document Status is Complete or Closed
@@ -2252,6 +2267,8 @@ public class MPayment extends X_C_Payment
 		counter.setC_Project_ID(getC_Project_ID());
 		counter.setUser1_ID(getUser1_ID());
 		counter.setUser2_ID(getUser2_ID());
+		counter.setC_CostCenter_ID(getC_CostCenter_ID());
+		counter.setC_Department_ID(getC_Department_ID());
 		counter.saveEx(get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine(counter.toString());
 		setRef_Payment_ID(counter.getC_Payment_ID());
@@ -2558,10 +2575,13 @@ public class MPayment extends X_C_Payment
 	public boolean voidIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());		
-		
-		if (getC_DepositBatch_ID() > 0 && getC_DepositBatch().isProcessed()) {
-			m_processMsg = Msg.translate(getCtx(), "DepositBatchProcessed") + getC_DepositBatch();
-			return false;
+
+		if (getC_DepositBatch_ID() > 0) {
+			MDepositBatch db = new MDepositBatch(getCtx(), getC_DepositBatch_ID(), get_TrxName());
+			if (db.isProcessed()) {
+				m_processMsg = Msg.translate(getCtx(), "DepositBatchProcessed") + db;
+				return false;
+			}
 		}
 		
 		if (DOCSTATUS_Closed.equals(getDocStatus())
@@ -2660,9 +2680,12 @@ public class MPayment extends X_C_Payment
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
 		
-		if (getC_DepositBatch_ID() != 0 && getC_DepositBatch().isProcessed()) {
-			m_processMsg = Msg.translate(getCtx(), "DepositBatchProcessed" )+ getC_DepositBatch();
-			return false;
+		if (getC_DepositBatch_ID() > 0) {
+			MDepositBatch db = new MDepositBatch(getCtx(), getC_DepositBatch_ID(), get_TrxName());
+			if (db.isProcessed()) {
+				m_processMsg = Msg.translate(getCtx(), "DepositBatchProcessed") + db;
+				return false;
+			}
 		}
 		
 		// Before reverseCorrect
@@ -2842,12 +2865,15 @@ public class MPayment extends X_C_Payment
 	public boolean reverseAccrualIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
-		
-		if (getC_DepositBatch_ID() != 0 && getC_DepositBatch().isProcessed()) {
-			m_processMsg = Msg.translate(getCtx(), "DepositBatchProcessed") + getC_DepositBatch();
-			return false;
+
+		if (getC_DepositBatch_ID() > 0) {
+			MDepositBatch db = new MDepositBatch(getCtx(), getC_DepositBatch_ID(), get_TrxName());
+			if (db.isProcessed()) {
+				m_processMsg = Msg.translate(getCtx(), "DepositBatchProcessed") + db;
+				return false;
+			}
 		}
-		
+
 		// Before reverseAccrual
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_BEFORE_REVERSEACCRUAL);
 		if (m_processMsg != null)
@@ -2881,6 +2907,11 @@ public class MPayment extends X_C_Payment
 			return false;	
 		
 		MPeriod.testPeriodOpen(getCtx(), getDateAcct(), getC_DocType_ID(), getAD_Org_ID());
+
+		if (!DocumentEngine.canReactivateThisDocType(getC_DocType_ID())) {
+			m_processMsg = Msg.getMsg(getCtx(), "DocTypeCannotBeReactivated", new Object[] {MDocType.get(getC_DocType_ID()).getNameTrl()});
+			return false;
+		}
 
 		MAllocationHdr[] allocations = MAllocationHdr.getOfPayment(getCtx(), getC_Payment_ID(), get_TrxName());
 		if (allocations.length > 0) {

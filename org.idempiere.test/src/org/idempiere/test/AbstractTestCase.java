@@ -164,6 +164,7 @@ public abstract class AbstractTestCase {
 				trx.rollback();
 			trx.close();
 		}
+		ServerContext.dispose();
 	}
 	
 	/**
@@ -239,7 +240,7 @@ public abstract class AbstractTestCase {
 	static void shutdown() {
 	}
 	
-	private static final class MyBeforeAllCallback implements BeforeAllCallback {
+	protected static final class MyBeforeAllCallback implements BeforeAllCallback {
 		@Override
 		public void beforeAll(ExtensionContext context) throws Exception {
 			Adempiere.startup(false);

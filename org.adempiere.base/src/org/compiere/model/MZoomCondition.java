@@ -267,8 +267,16 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 						// no parent link -- search in context of window
 						String parentctxid = Env.getContext(Env.getCtx(), windowNo, parentTab.getKeyColumnName());
 						if (! Util.isEmpty(parentctxid)) {
-							parentId = DB.getSQLValue(null, "SELECT " + parentTab.getKeyColumnName() + " FROM " + parentTab.getTableName() 
-									+ " WHERE " + parentTab.getKeyColumnName() + "=" + parentctxid);
+							StringBuilder sql = new StringBuilder("SELECT ").append(parentTab.getKeyColumnName())
+									.append(" FROM ").append(parentTab.getTableName())
+									.append(" WHERE ").append(parentTab.getKeyColumnName()).append("=");
+							if (parentTab.getKeyColumnName().endsWith("_UU")) {
+								sql.append(DB.TO_STRING(parentctxid));
+								parentId = DB.getSQLValueStringEx(null, sql.toString());
+							} else {
+								sql.append(parentctxid);
+								parentId = DB.getSQLValueEx(null, sql.toString());
+							}
 						}
 						if (parentId == null)
 							return 0;
@@ -407,8 +415,9 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 		builder.append(tableName)
 			.append(" WHERE ")
 			.append(whereClause)
-			.append(" AND ")
-			.append(Env.parseContext(Env.getCtx(), 0, getWhereClause(), false, true));
+			.append(" AND (")
+			.append(Env.parseContext(Env.getCtx(), 0, getWhereClause(), false, true))
+			.append(")");
 		
 		int no = DB.getSQLValue(null, builder.toString());		
 		return no == 1;

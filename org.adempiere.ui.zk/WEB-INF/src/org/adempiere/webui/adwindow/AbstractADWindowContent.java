@@ -47,6 +47,7 @@ import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.WArchive;
 import org.adempiere.webui.WRequest;
 import org.adempiere.webui.WZoomAcross;
+import org.adempiere.webui.acct.WAcctViewer;
 import org.adempiere.webui.adwindow.validator.WindowValidatorEvent;
 import org.adempiere.webui.adwindow.validator.WindowValidatorEventType;
 import org.adempiere.webui.adwindow.validator.WindowValidatorManager;
@@ -92,6 +93,7 @@ import org.adempiere.webui.window.LabelAction;
 import org.adempiere.webui.window.WChat;
 import org.adempiere.webui.window.WPostIt;
 import org.adempiere.webui.window.WRecordAccessDialog;
+import org.adempiere.webui.window.WTableAttribute;
 import org.compiere.grid.ICreateFrom;
 import org.compiere.model.DataStatusEvent;
 import org.compiere.model.DataStatusListener;
@@ -110,9 +112,11 @@ import org.compiere.model.MRecentItem;
 import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
+import org.compiere.model.MTableAttributeSet;
 import org.compiere.model.MWindow;
 import org.compiere.model.PO;
 import org.compiere.model.StateChangeEvent;
+import org.compiere.model.SystemIDs;
 import org.compiere.model.SystemProperties;
 import org.compiere.model.X_AD_CtxHelp;
 import org.compiere.process.DocAction;
@@ -1292,9 +1296,10 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 			if (infoName != null && infoDisplay != null)
 				break;
 		}
-		if (infoDisplay == null) {
-			infoDisplay = "";
-		}
+    	if (infoName == null)
+    		infoName = adTabbox.getSelectedGridTab().getName();
+    	if (infoDisplay == null)
+    		infoDisplay = "";
 		String description = infoName + ": " + infoDisplay;
 
     	WChat chat = new WChat(curWindowNo, adTabbox.getSelectedGridTab().getCM_ChatID(), adTabbox.getSelectedGridTab().getAD_Table_ID(),
@@ -1339,6 +1344,10 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
     		if (infoName != null && infoDisplay != null)
     			break;
     	}
+    	if (infoName == null)
+    		infoName = adTabbox.getSelectedGridTab().getName();
+    	if (infoDisplay == null)
+    		infoDisplay = "";
     	String header = infoName + ": " + infoDisplay;
 
     	WPostIt postit = new WPostIt(header, adTabbox.getSelectedGridTab().getAD_PostIt_ID(), adTabbox.getSelectedGridTab().getAD_Table_ID(), recordId, recordUU, null);
@@ -1408,6 +1417,9 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
      * @return true if there's last focus editor
      */
 	public boolean focusToLastFocusEditor() {
+		if (ClientInfo.isMobile())
+			return false;
+
 		return focusToLastFocusEditor(false);
 	}
 	
@@ -1479,6 +1491,14 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 
 		AEnv.showWindow(form);
 	} // onQuickForm
+
+	/**
+	 * Open Table Attribute Window
+	 */
+	public void onAttributeForm()
+	{
+		new WTableAttribute(adTabbox.getSelectedGridTab());
+	}
 
     /**
      * @param event
@@ -1597,7 +1617,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
     		Integer[] data = (Integer[]) event.getData();
     		adTabbox.setDetailPaneSelectedTab(data[0], data[1]);
     	}
-    	else if (event.getName().equals(ON_FOCUS_DEFER_EVENT)) {
+    	else if (event.getName().equals(ON_FOCUS_DEFER_EVENT) && !ClientInfo.isMobile()) {
     		HtmlBasedComponent comp = (HtmlBasedComponent) event.getData();
     		if (comp instanceof ADTabpanel)
     			((ADTabpanel)comp).focusToFirstEditor(false);
@@ -1806,8 +1826,9 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 
 		toolbar.enableQuickForm(adTabbox.getSelectedTabpanel().isEnableQuickFormButton() && !adTabbox.getSelectedGridTab().isReadOnly());
 
+		toolbar.enableAttributeForm(MTableAttributeSet.hasTableAttributeSet(adTabbox.getSelectedGridTab().getAD_Table_ID()));
+		
 		boolean isNewRow = adTabbox.getSelectedGridTab().getRowCount() == 0 || adTabbox.getSelectedGridTab().isNew();
-        
 		IADTabpanel adtab = adTabbox.getSelectedTabpanel();
         toolbar.enableProcessButton(adtab != null && adtab.isEnableProcessButton());
         toolbar.enableCustomize(adtab.isEnableCustomizeButton());
@@ -1903,11 +1924,11 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 							PO po = tab.getTableModel().getPO(row);
 							titleLogic = Env.parseVariable(titleLogic, po, null, false);
 						} else {
-							titleLogic = Env.parseContext(Env.getCtx(), curWindowNo, titleLogic, false, true);
+							titleLogic = Env.parseContext(Env.getCtx(), curWindowNo, titleLogic, false, true, false, false);
 						}
 					}
 				} else {
-					titleLogic = Env.parseContext(Env.getCtx(), curWindowNo, titleLogic, false, true);
+					titleLogic = Env.parseContext(Env.getCtx(), curWindowNo, titleLogic, false, true, false, false);
 				}
         		sb.append(titleLogic);
         		header = sb.toString().trim();
@@ -2275,13 +2296,12 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
             			}
             		}
             		if (!isTabExcluded) {
-            			//sleep needed for onClose to show confirmation dialog
-            			try {
-    						Thread.sleep(200);
-    					} catch (InterruptedException e2) {
-    					}
-            			if (!showingOnExitDialog)
-            				Executions.schedule(getComponent().getDesktop(), e1 -> asyncAutoSave(), new Event("onAutoSave"));
+            			//schedule for onClose to show confirmation dialog
+            			Executions.schedule(getComponent().getDesktop(), 
+            					e1 -> {
+            						if (!showingOnExitDialog)
+                        				Executions.schedule(getComponent().getDesktop(), e2 -> asyncAutoSave(), new Event("onAsyncAutoSave"));
+            					},  new Event("onAutoSaveChangesSchedule"));
             		}
         		}
         	}
@@ -3853,8 +3873,9 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 
 			if (ps != null && ps.equals("Y"))
 			{
-				new org.adempiere.webui.acct.WAcctViewer(Env.getContextAsInt (ctx, curWindowNo, "AD_Client_ID"),
-						tableId, recordId);
+				ADForm form = ADForm.openForm(SystemIDs.FORM_ACCOUNT_INFO,
+						WAcctViewer.INITIAL_AD_TABLE_ID + "=" + tableId + "\n" + WAcctViewer.INITIAL_RECORD_ID + "=" + recordId);
+				AEnv.showWindow(form);
 			}
 			else
 			{
@@ -4369,13 +4390,6 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 	 */
 	public IADTabbox getADTab() {
 		return adTabbox;
-	}
-
-	/**
-	 * @param pi
-	 */
-	@Deprecated(forRemoval = true, since = "11")
-	public void executeASync(ProcessInfo pi) {
 	}
 
 	/**

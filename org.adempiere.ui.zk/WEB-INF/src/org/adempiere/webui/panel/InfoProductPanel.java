@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Vector;
 import java.util.logging.Level;
 
+import org.adempiere.base.GeneratedCodeCoverageExclusion;
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
@@ -97,7 +98,9 @@ import org.zkoss.zul.South;
  * @version	InfoPayment.java Adempiere Swing UI 3.4.1
  */
 
-@Deprecated // replaced with InfoProductWindow IDEMPIERE-325
+@Deprecated (since="13", forRemoval=true) // replaced with InfoProductWindow IDEMPIERE-325
+@SuppressWarnings("removal")
+@GeneratedCodeCoverageExclusion
 public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 {
 	/**
@@ -631,7 +634,7 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 		m_count = -1;
 		
 		PreparedStatement pstmt = null;
-		ResultSet rs = null;;
+		ResultSet rs = null;
 		try
 		{
 			pstmt = DB.prepareStatement(sqlCount, null);

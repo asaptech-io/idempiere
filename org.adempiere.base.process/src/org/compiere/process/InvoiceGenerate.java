@@ -238,7 +238,8 @@ public class InvoiceGenerate extends SvrProcess
 						&& m_bpartnerID != order.getC_BPartner_ID())
 						|| (m_invoice != null 
 						&& (m_invoice.getC_BPartner_Location_ID() != order.getBill_Location_ID() ||
-							m_invoice.getAD_User_ID() != order.getBill_User_ID()) ) )
+							m_invoice.getAD_User_ID() != order.getBill_User_ID() ||
+							m_invoice.getAD_Org_ID() != order.getAD_Org_ID()) ) )
 					completeInvoice();
 				boolean completeOrder = MOrder.INVOICERULE_AfterOrderDelivered.equals(order.getInvoiceRule());
 				
@@ -562,7 +563,8 @@ public class InvoiceGenerate extends SvrProcess
 				// minimum amount not reached
 				DecimalFormat format = DisplayType.getNumberFormat(DisplayType.Amount);
 				String amt = format.format(m_invoice.getGrandTotal().doubleValue());
-				String message = Msg.parseTranslation(getCtx(), "@NotInvoicedAmt@ " + amt + " - " + m_invoice.getC_BPartner().getName());
+				MBPartner bp = MBPartner.get(getCtx(), m_invoice.getC_BPartner_ID());
+				String message = Msg.parseTranslation(getCtx(), "@NotInvoicedAmt@ " + amt + " - " + bp.getName());
 				addLog(message);
 				if (m_savepoint != null) {
 					try {

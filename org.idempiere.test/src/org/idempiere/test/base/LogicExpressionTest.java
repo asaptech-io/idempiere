@@ -37,12 +37,14 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.compiere.model.GridTab;
 import org.compiere.model.MColumn;
 import org.compiere.model.MTable;
 import org.compiere.model.PO;
 import org.compiere.model.Query;
 import org.compiere.util.DB;
 import org.compiere.util.DefaultEvaluatee;
+import org.compiere.util.DefaultEvaluatee.DataProvider;
 import org.compiere.util.Env;
 import org.compiere.util.LegacyLogicEvaluator;
 import org.compiere.util.TimeUtil;
@@ -50,7 +52,6 @@ import org.idempiere.expression.logic.LogicEvaluator;
 import org.idempiere.test.AbstractTestCase;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("deprecation")
 /**
  * Unit test for logical expression using context variables 
  * @author hengsin
@@ -62,6 +63,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	public LogicExpressionTest() {
 	}
 
+	@SuppressWarnings("removal")
 	@Test
 	public void testEqual() {
 		
@@ -108,6 +110,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test and (&)
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testAnd() {
 		String expr = "@$Element_BP@=Y & @AnyBPartner@=N";
@@ -154,6 +157,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 		testInName123(expr);
 	}
 
+	@SuppressWarnings("removal")
 	private void testInName123(String expr) {
 		Env.setContext(Env.getCtx(), "Name", (String)null);
 		assertFalse(LegacyLogicEvaluator.evaluateLogic(evaluatee, expr));
@@ -170,6 +174,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 		assertFalse(LogicEvaluator.evaluateLogic(evaluatee, expr));
 	}
 
+	@SuppressWarnings("removal")
 	private void testInARS(String expr) {
 		Env.setContext(Env.getCtx(), "LineType", (String)null);
 		Env.setContext(Env.getCtx(), "CalculationType", (String)null);
@@ -205,6 +210,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test not equal (!)
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testNotEqual() {
 		String expr = "@C_Bpartner_ID@!0";
@@ -247,6 +253,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test the combine use of or (|) plus and (&) operator
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testOrAnd() {
 		String expr = "@IsSold@='Y' | @IsPurchased@='Y' & @IsSummary@='N'";
@@ -284,6 +291,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test the combine use of and (&) plus or (|) operator
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testAndOr() {
 		String expr = "@IsSummary@='N' & @ProductType@=I | @ProductType@=S";
@@ -359,6 +367,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test greater than (>)
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testGT() {
 		String expr = "@IsLot@=Y& @M_LotCtl_ID@ > 0";
@@ -409,6 +418,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test less than (<)
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testLT() {
 		String expr = "@A_Asset_ID@<1&@A_CreateAsset@='Y'";
@@ -533,6 +543,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test default operator (:)
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testConditionalVariable() {
 		String expr = "@IsSOTrx:N@=N | @+IgnoreIsSOTrxInBPInfo:N@=Y";
@@ -600,6 +611,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test comparison of date and timestamp values
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testDateExpression() {
 		String expr = "@DateAcct@<@DateOrdered@";
@@ -629,6 +641,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test comparison of numeric values
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testNumericExpression() {
 		String expr = "@QtyReserved@=0";
@@ -658,6 +671,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test the use of empty string literal ('')
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testEmptyStringExpression() {
 		String expr = "@ColumnSQL@=''";
@@ -683,6 +697,7 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test the use of $env to access environment variables
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testOSEnvVariable() {
 		String username = System.getenv("USER");
@@ -695,22 +710,62 @@ public class LogicExpressionTest  extends AbstractTestCase {
 	/**
 	 * Test nested property operator (.)
 	 */
+	@SuppressWarnings("removal")
 	@Test
 	public void testNestedProperty() {
 		String expr = "@Processed@=Y & @M_Product_ID.IsBOM@=Y";
 		Env.setContext(Env.getCtx(), 1, "Processed", (String)null);
-		assertFalse(LegacyLogicEvaluator.evaluateLogic(new DefaultEvaluatee(null, 1, 0), expr));
+		assertFalse(LegacyLogicEvaluator.evaluateLogic(new DefaultEvaluatee((GridTab)null, 1, 0), expr));
 		
 		int pchair = 133;
 		Env.setContext(Env.getCtx(), 1, "Processed", "Y");
 		Env.setContext(Env.getCtx(), 1, "M_Product_ID", pchair);
-		assertTrue(LegacyLogicEvaluator.evaluateLogic(new DefaultEvaluatee(null, 1, 0), expr));
+		assertTrue(LegacyLogicEvaluator.evaluateLogic(new DefaultEvaluatee((GridTab)null, 1, 0), expr));
 		
 		Env.setContext(Env.getCtx(), 1, "Processed", (String)null);
-		assertFalse(LogicEvaluator.evaluateLogic(new DefaultEvaluatee(null, 1, 0), expr));
+		assertFalse(LogicEvaluator.evaluateLogic(new DefaultEvaluatee((GridTab)null, 1, 0), expr));
 		
 		Env.setContext(Env.getCtx(), 1, "Processed", "Y");
 		Env.setContext(Env.getCtx(), 1, "M_Product_ID", pchair);
-		assertTrue(LogicEvaluator.evaluateLogic(new DefaultEvaluatee(null, 1, 0), expr));
-	}	
+		assertTrue(LogicEvaluator.evaluateLogic(new DefaultEvaluatee((GridTab)null, 1, 0), expr));
+	}
+
+	@Test
+	public void testDataProvider() {
+
+		final int DUMMY_WINDOW_NO = 1;
+		final int DUMMY_TAB_NO = 0;
+
+		DefaultEvaluatee.DataProvider dp = new DataProvider() {
+			@Override
+			public Object getValue(String columnName) {
+
+				String value = null;
+
+				if ("MyContext".equals(columnName))
+					value = "MyDataProviderValue";
+
+				return value;
+			}
+
+			@Override
+			public Object getProperty(String propertyName) { return null; }
+
+			@Override
+			public MColumn getColumn(String columnName) { return null; }
+
+			@Override
+			public String getTrxName() { return null; }
+		};
+		DefaultEvaluatee myEvaluatee = new DefaultEvaluatee(dp, DUMMY_WINDOW_NO, DUMMY_TAB_NO);
+		Env.setContext(Env.getCtx(), DUMMY_WINDOW_NO, DUMMY_TAB_NO, "MyContext", "MyContextValue");
+
+		String expression = "@MyContext@ = 'MyDataProviderValue'";
+		assertTrue(LogicEvaluator.evaluateLogic(myEvaluatee, expression));
+
+		Env.setContext(Env.getCtx(), DUMMY_WINDOW_NO, DUMMY_TAB_NO, "MyOtherContext", "MyOtherValue");
+
+		expression = "@MyOtherContext@ = 'MyOtherValue'";
+		assertTrue(LogicEvaluator.evaluateLogic(myEvaluatee, expression));
+	}
 }

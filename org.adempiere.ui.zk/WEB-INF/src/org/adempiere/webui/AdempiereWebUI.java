@@ -103,6 +103,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 
 	/** {@link Desktop} attribute to hold {@link IDesktop} reference */
 	public static final String APPLICATION_DESKTOP_KEY = "application.desktop";
+	public static final String ON_CREATE_LOGIN_WINDOW = "onCreateLoginWindow";
 
 	/** org.zkoss.zk.ui.WebApp.name preference from zk.xml */
 	public static String APP_NAME = null;
@@ -133,9 +134,6 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 
 	private static final CLogger logger = CLogger.getCLogger(AdempiereWebUI.class);
 
-	@Deprecated(forRemoval = true, since = "11")
-	public static final String EXECUTION_CARRYOVER_SESSION_KEY = "execution.carryover";
-
 	/** Session attribute to hold {@link ClientInfo} reference */
 	private static final String CLIENT_INFO = "client.info";
 	
@@ -163,6 +161,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     	m_URLParameters = new ConcurrentHashMap<String, String[]>(Executions.getCurrent().getParameterMap());
     	
     	this.addEventListener(ON_LOGIN_COMPLETED, this);
+		this.addEventListener(ON_CREATE_LOGIN_WINDOW, this);
     }
 
     /**
@@ -190,9 +189,9 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
         // Open login dialog or if with valid login session, goes to desktop
         if (session.getAttribute(SessionContextListener.SESSION_CTX) == null || !SessionManager.isUserLoggedIn(ctx))
         {
-            loginDesktop = new WLogin(this);
-            loginDesktop.createPart(this.getPage());
-            loginDesktop.getComponent().getRoot().addEventListener(Events.ON_CLIENT_INFO, this);
+			getRoot().addEventListener(Events.ON_CLIENT_INFO, this);
+			// use echo event to create login window after client info event
+			Events.echoEvent(ON_CREATE_LOGIN_WINDOW, this, null);
         }
         else
         {
@@ -511,12 +510,14 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 	    	isAdminLogin  = (boolean)desktop.getSession().getAttribute(ISSOPrincipalService.SSO_ADMIN_LOGIN);
 	    
 	    boolean isSSOLogin = "Y".equals(Env.getContext(Env.getCtx(), Env.IS_SSO_LOGIN));
+		String provider = (String) desktop.getSession().getAttribute(ISSOPrincipalService.SSO_SELECTED_PROVIDER);
 	    String ssoLogoutURL = null;
 	    if (!isAdminLogin && isSSOLogin)
-	    {
-	    	ISSOPrincipalService service = SSOUtils.getSSOPrincipalService();
-	    	ssoLogoutURL = service.getLogoutURL();
-	    }
+		{
+			ISSOPrincipalService service = SSOUtils.getSSOPrincipalService(provider);
+			if (service != null)
+				ssoLogoutURL = service.getLogoutURL();
+		}
 	    
 	    final Session session = logout0();
 	    
@@ -672,8 +673,10 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 				appDesktop.setClientInfo(clientInfo);
 		} else if (event.getName().equals(ON_LOGIN_COMPLETED)) {
 			loginCompleted();
-		} 
-
+		} else if (event.getName().equals(ON_CREATE_LOGIN_WINDOW)) {
+			loginDesktop = new WLogin(this);
+			loginDesktop.createPart(this.getPage());
+		}
 	}
 
 	/**
